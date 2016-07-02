@@ -23,6 +23,19 @@ int getVarID(string name) {
 	nameTable.push_back(name);
 	return nameTable.size()-1;
 }
+vector<string> argTable;
+int getArgID(string name) {
+	auto it=argTable.end();
+	for(auto it=argTable.begin(); it!=argTable.end(); it++) {
+		if(argTable[it-argTable.begin()]==name) {
+			return (int)(it-argTable.begin())-(int)(argTable.size())-1;
+    }
+	}
+	return 0;
+}
+void createArg(string arg) {
+  argTable.push_back(arg);
+}
 ofstream out;
 %}
 %union {
@@ -48,13 +61,17 @@ program:
   fh function ef program
   | fh function ef
 fh:
-  FUNCTION VARNAME {out << $2 << ":\n\tbpget\n\tspget\n\tbpset" << endl;}
+  FUNCTION VARNAME LPARENS args RPARENS {out << $2 << ":\n\tbpget\n\tspget\n\tbpset" << endl;}
+  | FUNCTION VARNAME LPARENS RPARENS {out << $2 << ":\n\tbpget\n\tspget\n\tbpset" << endl;}
+args:
+  VARNAME COMMA args {createArg($1);}
+  | VARNAME {createArg($1);}
 ef:
-  END {out << "\tbpget\n\tspset\n\tbpset\n\tret"<<endl;}
+  END {out << "\tbpget\n\tspset\n\tbpset\n\tret"<<endl;argTable.clear();}
 function:
-  VARNAME EQ exp program {out << "\t[ci:2] store "<<getVarID($1)*4 << endl;}
+  VARNAME EQ exp function {out << "\t[ci:2] store "<<getVarID($1)*4 << endl;}
   | VARNAME EQ exp {out << "\t[ci:2] store "<<getVarID($1)*4 << endl;}
-  | exp program {out << "\tdrop" << endl;}
+  | exp function {out << "\tdrop" << endl;}
   | exp {out << "\tdrop" << endl;}
 exp:
   factor
@@ -66,19 +83,18 @@ factor:
   | factor DIV factor {out << "\tdiv" << endl;}
 num:
   INT { out << "\tpush "<< $1 << endl;}
-  | VARNAME LPARENS function RPARENS {out << "\tcpget\n\tjmp @" << $1 << "\n\t[ci:2] load " << getVarID($1) << endl;}
+  | VARNAME LPARENS fargs RPARENS {out << "\tcpget\n\tjmp @" << $1 << "\n\t[ci:2] load " << getVarID($1) << endl;}
   | VARNAME LPARENS RPARENS {out << "\tcpget\n\tjmp @" << $1 << "\n\t[ci:2] load " << getVarID($1) << endl;}
-  | VARNAME { out << "\t[ci:2]load "<<getVarID($1)*4<<endl;}
+  | VARNAME { char* arg=$1; int id; if((id=getArgID(arg))==0) {out << "\t[ci:2]load "<<getVarID(arg)*4<<endl;} else {out<< "\tget "<< id << endl;}}
   | LPARENS exp RPARENS
-function:
-  exp COMMA function
+fargs:
+  exp COMMA fargs
   | exp
 %%
 int main(int argc, char** argv) {
   int pid;
   mkfifo("tmp.a", 0660);
   if(!(pid=fork())) {
-    //sleep(1);
     system("as -o tmp.o crt0.asm tmp.a libmtg.asm");
     return 0;
   }

@@ -1,6 +1,7 @@
-FUNCTION main
-  this=is-a(new,and,sh+o+rt)*test
+FUNCTION main()
+  a(5)
 END
-FUNCTION a
-  puti(5)
+FUNCTION a(i)
+  puti(i)
+  a(i+1)
 END
