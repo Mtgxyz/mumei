@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
   int pid;
   mkfifo("tmp.a", 0660);
   if(!(pid=fork())) {
-    system("as -o tmp.o crt0.asm tmp.a libmtg.asm");
+    system("svmas -o tmp.o crt0.asm tmp.a libmtg.asm");
     return 0;
   }
   out=ofstream("tmp.a",ios::out);
@@ -114,7 +114,7 @@ int main(int argc, char** argv) {
   }
   out.close();
   wait(NULL);
-  system(("explink -o "s+argv[2]+" -c tmp.o -C 0").c_str());
+  system(("svmln -o "s+argv[2]+" -c tmp.o -C 0").c_str());
   unlink("tmp.o");
 }
 
